@@ -1,17 +1,10 @@
+/*
+Copyright © 2024 NAME HERE <EMAIL ADDRESS>
+*/
 package main
 
-import (
-	"fmt"
-	"log"
-
-	"github.com/Uttkarsh-raj/PS-1708/routes"
-	"github.com/gin-gonic/gin"
-)
+import "github.com/Uttkarsh-raj/gitup/cmd"
 
 func main() {
-	fmt.Println("Starting Server...")
-	server := gin.New() // New server
-	server.Use(gin.Logger())
-	routes.RegisterRoutes(server) // Register the Different routes to the server
-	log.Fatal(server.Run(":3000"))
+	cmd.Execute()
 }
