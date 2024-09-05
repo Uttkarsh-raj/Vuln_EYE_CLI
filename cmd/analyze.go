@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/Uttkarsh-raj/gitup/helper"
 	"github.com/spf13/cobra"
@@ -14,39 +14,25 @@ var analyze = &cobra.Command{
 	Short: "Scan the repo",
 	Long:  `Scan the code to find the presence of any vulnerable dependency`,
 	Run: func(cmd *cobra.Command, args []string) {
-		file, err := os.Open("./app/build.gradle")
-		// file, err := os.Open("test.gradle")
-		if err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		lines := []string{}
-		for scanner.Scan() {
-			line := scanner.Text()
-			lines = append(lines, line)
-		}
-
-		// Generate the map of dependencies
-		depMap := helper.GetDependency(lines)
-
-		resp, err := helper.GetData(depMap) // check for errors
-		if err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
-		fmt.Print(resp) // Currently printing but i dont think we need this, we can make some use of this later
-
-		if err := scanner.Err(); err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
-			os.Exit(1)
+		isFlutter, _ := cmd.Flags().GetBool("flutter") // default then android else when --flutter is added run for flutter
+		if isFlutter {
+			err := helper.ScanFlutterProject("./pubspec.yaml")
+			if err != nil {
+				fmt.Fprint(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+		} else {
+			re := regexp.MustCompile(`(?:implementation|testImplementation|androidTestImplementation)\s+(?:platform\()?['"]([^:]+):([^:]+):([^'"]+)['"]\)?`)
+			err := helper.ScanProject("./app/build.gradle", re)
+			if err != nil {
+				fmt.Fprint(os.Stderr, err.Error())
+				os.Exit(1)
+			}
 		}
 	},
 }
 
 func init() {
+	analyze.Flags().Bool("flutter", false, "Scan for Flutter dependencies")
 	rootCmd.AddCommand(analyze)
 }

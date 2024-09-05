@@ -1,20 +1,24 @@
 package helper
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/Uttkarsh-raj/gitup/models"
+	"gopkg.in/yaml.v3"
 )
 
 // Function to generate map of dependencies
-func GetDependency(lines []string) map[string]string {
-	re := regexp.MustCompile(`(?:implementation|testImplementation|androidTestImplementation)\s+(?:platform\()?['"]([^:]+):([^:]+):([^'"]+)['"]\)?`)
+func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 
 	deps := make(map[string]string)
 	for _, line := range lines {
@@ -104,4 +108,103 @@ func GetData(dependencyMap map[string]string) (string, error) {
 	}
 
 	return response, nil
+}
+
+func ScanProject(fileLoc string, re *regexp.Regexp) error {
+	file, err := os.Open(fileLoc)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lines := []string{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+
+	// Generate the map of dependencies
+	depMap := GetDependency(lines, re)
+
+	resp, err := GetData(depMap) // check for errors
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(resp) // Currently printing but i dont think we need this, we can make some use of this later
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ScanFlutterProject(fileLoc string) error {
+	file, err := os.Open(fileLoc)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var pubspec models.Pubspec
+	decoder := yaml.NewDecoder(file)
+	err = decoder.Decode(&pubspec)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	// Convert dependencies
+	deps := ConvertVersions(pubspec.Dependencies)
+	resp, err := GetData(deps) // check for errors
+	if err != nil {
+		return err
+	}
+	fmt.Println("Dependencies: ")
+	fmt.Print(resp)
+
+	// Convert dev dependencies
+	devDeps := ConvertVersions(pubspec.DevDependencies)
+	resp, err = GetData(devDeps) // check for errors
+	if err != nil {
+		return err
+	}
+	fmt.Println("Dev Dependencies: ")
+	fmt.Print(resp)
+
+	return nil
+}
+
+func ConvertVersions(deps map[string]interface{}) map[string]string {
+	normalized := make(map[string]string)
+	for pkg, ver := range deps {
+		var version string
+		switch v := ver.(type) {
+		case string:
+			version = normalizeVersion(v)
+		case map[interface{}]interface{}:
+			if len(v) == 1 {
+				for _, value := range v {
+					if strValue, ok := value.(string); ok {
+						version = normalizeVersion(strValue)
+					}
+				}
+			}
+		}
+		if version != "" {
+			normalized[pkg] = version
+		}
+	}
+	return normalized
+}
+
+// normalizeVersion extracts and normalizes the version string from various formats.
+func normalizeVersion(version string) string {
+	version = strings.TrimLeft(version, "^>=~")
+	re := regexp.MustCompile(`^(\d+\.\d+\.\d+)`)
+	match := re.FindStringSubmatch(version)
+	if len(match) > 0 {
+		return match[1]
+	}
+	return version
 }
