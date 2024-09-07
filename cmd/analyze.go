@@ -16,8 +16,9 @@ var analyze = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		isFlutter, _ := cmd.Flags().GetBool("flutter") // default then android else when --flutter is added run for flutter
 		verbose, _ := cmd.Flags().GetBool("verbose")
+		fix, _ := cmd.Flags().GetBool("fix")
 		if isFlutter {
-			err := helper.ScanFlutterProject("./pubspec.yaml", verbose)
+			err := helper.ScanFlutterProject("./pubspec.yaml", verbose, fix)
 			if err != nil {
 				fmt.Fprint(os.Stderr, err.Error())
 				os.Exit(1)
@@ -27,8 +28,8 @@ var analyze = &cobra.Command{
 			}
 		} else {
 			re := regexp.MustCompile(`(?:implementation|testImplementation|androidTestImplementation)\s+(?:platform\()?['"]([^:]+):([^:]+):([^'"]+)['"]\)?`)
-			//err := helper.ScanProject("./app/build.gradle", re)
-			err := helper.ScanProject("./test.gradle", re, verbose)
+			err := helper.ScanProject("./app/build.gradle", re, verbose, fix)
+			// err := helper.ScanProject("./test.gradle", re, verbose, fix)
 			if err != nil {
 				fmt.Fprint(os.Stderr, err.Error())
 				os.Exit(1)
@@ -43,5 +44,6 @@ var analyze = &cobra.Command{
 func init() {
 	analyze.Flags().Bool("flutter", false, "Scan for Flutter dependencies")
 	analyze.Flags().Bool("verbose", false, "Gives a Verbose output")
+	analyze.Flags().Bool("fix", false, "Gives the fixed version if present")
 	rootCmd.AddCommand(analyze)
 }

@@ -34,7 +34,7 @@ func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 }
 
 // Get data from the dependencies json
-func GetData(dependencyMap map[string]string, verbose bool) (string, error) {
+func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, error) {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(dependencyMap)) // trap the errors
 	response := ""
@@ -82,6 +82,7 @@ func GetData(dependencyMap map[string]string, verbose bool) (string, error) {
 			}
 
 			if verbose {
+				//verbose mode
 				var response models.VerboseResp
 				err = json.Unmarshal(body, &response)
 				if err != nil {
@@ -89,15 +90,55 @@ func GetData(dependencyMap map[string]string, verbose bool) (string, error) {
 				}
 				for _, vuln := range response.Vulns {
 					detailedMessage :=
-						fmt.Errorf(
+						fmt.Sprintf(
 							"error: Vulnerability found for %s (Version: %s):\n- ID: %s\n- Summary: %s\n",
 							name, version, vuln.Aliases[0], vuln.Summary)
-					errorChannel <- detailedMessage
+					// if --fix is used the adding more info
+					if fix {
+						//info for --fix
+						for _, affected := range vuln.Affected {
+							for _, r := range affected.Ranges {
+								for _, event := range r.Events {
+									if event.Introduced != "" {
+										detailedMessage += fmt.Sprintf("- Introduced: %s", event.Introduced)
+									}
+									if event.Fixed != "" {
+										detailedMessage += fmt.Sprintf("\n- Fixed: %s\n", event.Fixed)
+									}
+								}
+							}
+						}
+					}
+					errorChannel <- fmt.Errorf(detailedMessage)
 				}
 			} else {
-				if len(string(body)) > 5 {
-					errorChannel <- fmt.Errorf("error: Vulnerable package found: %s (Version: %s)\n ", name, version)
+				// Non-verbose mode
+				var response models.VerboseResp
+				err = json.Unmarshal(body, &response)
+				if err != nil {
+					errorChannel <- fmt.Errorf("error: Error unmarshalling from response body %s", err.Error())
 					return
+				}
+
+				for _, vuln := range response.Vulns {
+					nonVerboseMessage := fmt.Sprintf("error: Vulnerable package found: %s (Version: %s)\n", name, version)
+
+					// Add fix information if --fix flag is present
+					if fix {
+						for _, affected := range vuln.Affected {
+							for _, r := range affected.Ranges {
+								for _, event := range r.Events {
+									if event.Introduced != "" {
+										nonVerboseMessage += fmt.Sprintf("- Introduced: %s", event.Introduced)
+									}
+									if event.Fixed != "" {
+										nonVerboseMessage += fmt.Sprintf("\n- Fixed: %s\n", event.Fixed)
+									}
+								}
+							}
+						}
+					}
+					errorChannel <- fmt.Errorf(nonVerboseMessage)
 				}
 			}
 
@@ -123,7 +164,8 @@ func GetData(dependencyMap map[string]string, verbose bool) (string, error) {
 	return response, nil
 }
 
-func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool) error {
+// Function for scanning Android Projects.
+func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool, fix bool) error {
 	file, err := os.Open(fileLoc)
 	if err != nil {
 		return err
@@ -140,7 +182,7 @@ func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool) error {
 	// Generate the map of dependencies
 	depMap := GetDependency(lines, re)
 
-	_, err = GetData(depMap, verbose) // check for errors
+	_, err = GetData(depMap, verbose, fix) // check for errors
 	if err != nil {
 		return err
 	}
@@ -151,7 +193,8 @@ func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool) error {
 	return nil
 }
 
-func ScanFlutterProject(fileLoc string, verbose bool) error {
+// Function for scanning Flutter Projects
+func ScanFlutterProject(fileLoc string, verbose bool, fix bool) error {
 	file, err := os.Open(fileLoc)
 	if err != nil {
 		return err
@@ -167,20 +210,21 @@ func ScanFlutterProject(fileLoc string, verbose bool) error {
 
 	// Convert dependencies
 	deps := ConvertVersions(pubspec.Dependencies)
-	_, err = GetData(deps, verbose) // check for errors
+	_, err = GetData(deps, verbose, fix) // check for errors
 	if err != nil {
 		return err
 	}
 
 	// Convert dev dependencies
 	devDeps := ConvertVersions(pubspec.DevDependencies)
-	_, err = GetData(devDeps, verbose) // check for errors
+	_, err = GetData(devDeps, verbose, fix) // check for errors
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// helper function for the versions
 func ConvertVersions(deps map[string]interface{}) map[string]string {
 	normalized := make(map[string]string)
 	for pkg, ver := range deps {
