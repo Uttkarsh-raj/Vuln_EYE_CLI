@@ -28,16 +28,16 @@ func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool, fix bool) erro
 	// Generate the map of dependencies
 	depMap := GetDependency(lines, re)
 
+	if err := AnalyzeManifest(); err != nil {
+		return err
+	}
+
 	_, err = GetData(depMap, verbose, fix) // check for errors
 	if err != nil {
 		return err
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	if err := AnalyzeManifest(); err != nil {
 		return err
 	}
 	return nil
