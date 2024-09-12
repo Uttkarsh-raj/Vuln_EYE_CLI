@@ -1,20 +1,15 @@
 package helper
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"regexp"
-	"strings"
 	"sync"
 
 	"github.com/Uttkarsh-raj/gitup/models"
-	"gopkg.in/yaml.v3"
 )
 
 // Function to generate map of dependencies
@@ -162,99 +157,4 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 	}
 
 	return response, nil
-}
-
-// Function for scanning Android Projects.
-func ScanProject(fileLoc string, re *regexp.Regexp, verbose bool, fix bool) error {
-	file, err := os.Open(fileLoc)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := []string{}
-	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-	}
-
-	// Generate the map of dependencies
-	depMap := GetDependency(lines, re)
-
-	_, err = GetData(depMap, verbose, fix) // check for errors
-	if err != nil {
-		return err
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Function for scanning Flutter Projects
-func ScanFlutterProject(fileLoc string, verbose bool, fix bool) error {
-	file, err := os.Open(fileLoc)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var pubspec models.Pubspec
-	decoder := yaml.NewDecoder(file)
-	err = decoder.Decode(&pubspec)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-
-	// Convert dependencies
-	deps := ConvertVersions(pubspec.Dependencies)
-	_, err = GetData(deps, verbose, fix) // check for errors
-	if err != nil {
-		return err
-	}
-
-	// Convert dev dependencies
-	devDeps := ConvertVersions(pubspec.DevDependencies)
-	_, err = GetData(devDeps, verbose, fix) // check for errors
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// helper function for the versions
-func ConvertVersions(deps map[string]interface{}) map[string]string {
-	normalized := make(map[string]string)
-	for pkg, ver := range deps {
-		var version string
-		switch v := ver.(type) {
-		case string:
-			version = normalizeVersion(v)
-		case map[interface{}]interface{}:
-			if len(v) == 1 {
-				for _, value := range v {
-					if strValue, ok := value.(string); ok {
-						version = normalizeVersion(strValue)
-					}
-				}
-			}
-		}
-		if version != "" {
-			normalized[pkg] = version
-		}
-	}
-	return normalized
-}
-
-// normalizeVersion extracts and normalizes the version string from various formats.
-func normalizeVersion(version string) string {
-	version = strings.TrimLeft(version, "^>=~")
-	re := regexp.MustCompile(`^(\d+\.\d+\.\d+)`)
-	match := re.FindStringSubmatch(version)
-	if len(match) > 0 {
-		return match[1]
-	}
-	return version
 }
