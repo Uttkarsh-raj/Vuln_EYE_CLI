@@ -22,7 +22,7 @@ The Gitup CLI Tool offers a streamlined, command-line-based approach to vulnerab
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/gitup-cli.git
+   git clone https://github.com/Uttkarsh-raj/Vuln_EYE_CLI.git
    ```
 
 2. **Install Dependencies:**
