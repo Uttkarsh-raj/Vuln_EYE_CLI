@@ -101,6 +101,13 @@ jobs:
       run: |
         docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest gitup scan --flutter
 ```
+You can customize the workflow by adding any necessary flags to the gitup scan command based on your requirements.<br>
+**Flags:**
+
+   - `--fix`       Provides the fixed version if available.
+   - `--flutter`   Scans for Flutter dependencies.
+   - `--verbose`   Provides detailed output.
+   - `-h, --help`  Displays help information.
 
 ## Known Limitations
 
