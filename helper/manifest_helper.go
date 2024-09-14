@@ -19,25 +19,11 @@ func AnalyzeManifest() error {
 
 	manifest := &models.ManifestData{}
 
-	exportedActivityPattern := regexp.MustCompile(`android:exported="(true|false)"`)
-	permissionPattern := regexp.MustCompile(`android\.permission\.READ_MEDIA_IMAGES`)
-	debuggablePattern := regexp.MustCompile(`android:debuggable="(true|false)"`)
-	allowBackupPattern := regexp.MustCompile(`android:allowBackup="(true|false)"`)
-	intentFilterPattern := regexp.MustCompile(`<intent-filter>`)
+	permissionPattern := regexp.MustCompile(`android:name="(android\.permission\.[A-Z_]+)"`)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-
-		if strings.Contains(line, "android:exported") {
-			matches := exportedActivityPattern.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				manifest.ExportedActivityFound = true
-				if matches[1] == "true" {
-					manifest.ExportedActivityTrue = true
-				}
-			}
-		}
 
 		if strings.Contains(line, "<uses-permission") {
 			matches := permissionPattern.FindStringSubmatch(line)
@@ -46,98 +32,71 @@ func AnalyzeManifest() error {
 				manifest.Permissions = append(manifest.Permissions, permission)
 			}
 		}
-
-		if strings.Contains(line, "android:debuggable") {
-			matches := debuggablePattern.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				manifest.DebuggableFlag = matches[1]
-			}
-		}
-
-		if strings.Contains(line, "android:allowBackup") {
-			matches := allowBackupPattern.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				manifest.AllowBackupFlag = matches[1]
-			}
-		}
-
-		if intentFilterPattern.MatchString(line) {
-			manifest.IntentFilters = append(manifest.IntentFilters, line)
-		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 
-	logVulnerabilities(manifest)
+	logPermissionsWithWarning(manifest)
 
 	return nil
 }
 
-func logVulnerabilities(manifest *models.ManifestData) {
-	fmt.Println("===== Manifest Vulnerability Report =====")
-
-	if manifest.ExportedActivityFound && manifest.ExportedActivityTrue {
-		fmt.Println("Vulnerability: Exported Activity (android:exported=\"true\")")
-		fmt.Println("Severity: High")
-		fmt.Println("Risk: The MainActivity is marked as exported, meaning it is accessible to other applications.")
-		fmt.Println("       If this activity contains sensitive operations or data, malicious apps could invoke it and exploit the exposed functionality.")
-		fmt.Println("Mitigation: Set android:exported=\"false\" if the activity doesn't need to be accessed by other apps.")
-		fmt.Println("            If it does need to be exposed, ensure proper intent validation and permission checks.")
-		fmt.Println("--------------------------------------------")
-	} else if manifest.ExportedActivityFound && !manifest.ExportedActivityTrue {
-		fmt.Println("Exported Activity found, but not marked as exported (android:exported=\"false\"). No issue.")
-	}
+func logPermissionsWithWarning(manifest *models.ManifestData) {
+	fmt.Println("===== Permissions Analysis =====")
 
 	if len(manifest.Permissions) > 0 {
 		fmt.Println("Permissions found in the manifest:")
 		for _, permission := range manifest.Permissions {
-			fmt.Printf(" - %s\n", permission)
-			fmt.Println("  Severity: Unknown (Review if the permission is necessary and justified).")
-			fmt.Println("--------------------------------------------")
+			// Print permission
+			fmt.Printf("Permission granted: %s\n", permission)
+
+			// Print risk and mitigation in yellow
+			explainPermissionRisk(permission)
 		}
 	} else {
-		fmt.Println("No risky permissions found.")
-		fmt.Println("--------------------------------------------")
+		fmt.Println("No permissions found.")
 	}
 
-	if manifest.DebuggableFlag == "true" {
-		fmt.Println("Vulnerability: android:debuggable=\"true\"")
-		fmt.Println("Severity: Medium to High (depending on build)")
-		fmt.Println("Risk: If android:debuggable is set to true in production builds, it allows attackers to access the app's debugging information,")
-		fmt.Println("       which can be used to inspect app internals or tamper with its behavior.")
-		fmt.Println("Mitigation: Ensure android:debuggable=\"false\" is set for production builds.")
-		fmt.Println("--------------------------------------------")
-	} else if manifest.DebuggableFlag == "false" {
-		fmt.Println("No issue: Debuggable flag is set to false.")
-	} else {
-		fmt.Println("No debuggable flag found.")
+	fmt.Println("===== End of Permissions Analysis =====")
+}
+
+func explainPermissionRisk(permission string) {
+	fmt.Printf("Risk Explanation for %s:\n", permission)
+	switch permission {
+	case "android.permission.INTERNET":
+		fmt.Printf("\033[33m  ⚠️  Risk: Allows the app to access the internet, which could expose it to network-based attacks.\n")
+		fmt.Println("  Mitigation: Ensure proper input validation, secure communication (e.g., HTTPS), and encryption.\033[0m")
+	case "android.permission.READ_CONTACTS":
+		fmt.Printf("\033[33m  ⚠️  Risk: Allows the app to read the user's contacts data, which is sensitive.\n")
+		fmt.Println("  Mitigation: Only request this permission if absolutely necessary and explain to the user why it is needed.\033[0m")
+	case "android.permission.ACCESS_FINE_LOCATION":
+		fmt.Printf("\033[31m  🚨  Very Risky: Allows the app to access precise location data, which can be very sensitive and lead to privacy concerns.\n")
+		fmt.Println("  Mitigation: Minimize location requests and ensure data is handled securely.\033[0m")
+	case "android.permission.READ_EXTERNAL_STORAGE":
+		fmt.Printf("\033[33m  ⚠️  Risk: Grants access to the user's external storage, potentially exposing private files.\n")
+		fmt.Println("  Mitigation: Limit the usage to required files only, and ensure proper permission checks are in place.\033[0m")
+	case "android.permission.WRITE_EXTERNAL_STORAGE":
+		fmt.Printf("\033[31m  🚨  Very Risky: Allows the app to write to external storage, which can lead to data tampering or leaks.\n")
+		fmt.Println("  Mitigation: Ensure proper access controls and avoid writing sensitive data to external storage.\033[0m")
+	case "android.permission.CAMERA":
+		fmt.Printf("\033[31m  🚨  Very Risky: Grants access to the device's camera, which could be exploited for unauthorized photo or video capture.\n")
+		fmt.Println("  Mitigation: Ensure users are aware when the camera is in use and avoid unnecessary camera access.\033[0m")
+	case "android.permission.RECORD_AUDIO":
+		fmt.Printf("\033[31m  🚨  Very Risky: Allows the app to record audio, potentially leading to privacy concerns if misused.\n")
+		fmt.Println("  Mitigation: Clearly inform users when recording is happening and request permission only when necessary.\033[0m")
+	case "android.permission.SEND_SMS":
+		fmt.Printf("\033[33m  ⚠️  Risk: Allows the app to send SMS messages, which could result in spam or unauthorized messaging.\n")
+		fmt.Println("  Mitigation: Use this permission sparingly and ensure users are informed about SMS sending activities.\033[0m")
+	case "android.permission.READ_SMS":
+		fmt.Printf("\033[33m  ⚠️  Risk: Grants access to SMS messages, which could expose sensitive information.\n")
+		fmt.Println("  Mitigation: Access SMS only when absolutely necessary and handle message data with care.\033[0m")
+	case "android.permission.ACCESS_COARSE_LOCATION":
+		fmt.Printf("\033[33m  ⚠️  Risk: Allows access to approximate location data, which could still be used for tracking.\n")
+		fmt.Println("  Mitigation: Use location data responsibly and only when required.\033[0m")
+	default:
+		fmt.Printf("  Permission granted: %s\n", permission)
 	}
-
-	if manifest.AllowBackupFlag == "true" {
-		fmt.Println("Vulnerability: Backup Settings (android:allowBackup=\"true\")")
-		fmt.Println("Severity: Medium")
-		fmt.Println("Risk: The allowBackup flag is set to true, meaning user data and application data can be backed up to cloud services.")
-		fmt.Println("       This could expose sensitive data if not encrypted.")
-		fmt.Println("Mitigation: Set android:allowBackup=\"false\" if the app handles sensitive data to prevent automatic backups from exposing user information.")
-		fmt.Println("--------------------------------------------")
-	} else if manifest.AllowBackupFlag == "false" {
-		fmt.Println("No issue: Backup is disabled (android:allowBackup=\"false\").")
-	} else {
-		fmt.Println("No allowBackup flag found.")
-	}
-
-	// if len(manifest.IntentFilters) > 0 {
-	// 	fmt.Println("Vulnerability: Intent Filters (URL Handling and Sharing Files)")
-	// 	fmt.Println("Severity: High")
-	// 	fmt.Println("Risk: The app allows sharing of text, images, videos, and generic files through multiple intent-filters.")
-	// 	fmt.Println("       Malicious apps could exploit these to send invalid, malicious, or dangerous data.")
-	// 	fmt.Println("Mitigation: Validate all input data received through intents to ensure it's safe and follows the expected format. Always sanitize inputs.")
-	// 	fmt.Println("--------------------------------------------")
-	// } else {
-	// 	fmt.Println("No intent filters found.")
-	// }
-
-	fmt.Println("===== End of Report =====")
+	fmt.Println("--------------------------------------------")
 }

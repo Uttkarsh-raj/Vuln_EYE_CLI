@@ -12,9 +12,8 @@ import (
 	"github.com/Uttkarsh-raj/gitup/models"
 )
 
-// Function to generate map of dependencies
+// Function to generate a map of dependencies
 func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
-
 	deps := make(map[string]string)
 	for _, line := range lines {
 		matches := re.FindStringSubmatch(line)
@@ -22,7 +21,7 @@ func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 			// Construct key as "group:artifact"
 			key := matches[1] + ":" + matches[2]
 			version := matches[3]
-			deps[key] = version //key is package name and value is version
+			deps[key] = version // key is package name, value is version
 		}
 	}
 	return deps
@@ -32,7 +31,7 @@ func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, error) {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(dependencyMap)) // trap the errors
-	response := ""
+	report := ""                                         // To store the final report
 
 	for name, version := range dependencyMap {
 		wg.Add(1)
@@ -40,7 +39,7 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 		go func(name, version string) {
 			defer wg.Done()
 
-			// Creating the paylaod
+			// Creating the payload
 			payload := models.DepsPayload{
 				Version: version,
 			}
@@ -65,7 +64,7 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
-				errorChannel <- fmt.Errorf("error:Error sending HTTP request for %s:%s: %w", name, version, err)
+				errorChannel <- fmt.Errorf("error: Error sending HTTP request for %s:%s: %w", name, version, err)
 				return
 			}
 			defer resp.Body.Close()
@@ -76,73 +75,58 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 				return
 			}
 
-			if verbose {
-				//verbose mode
-				var response models.VerboseResp
-				err = json.Unmarshal(body, &response)
-				if err != nil {
-					errorChannel <- fmt.Errorf("error: Error Unmarshalling from response body %s", err.Error())
-				}
-				for _, vuln := range response.Vulns {
-					detailedMessage :=
-						fmt.Sprintf(
-							"error: Vulnerability found for %s (Version: %s):\n- ID: %s\n- Summary: %s\n",
-							name, version, vuln.Aliases[0], vuln.Summary)
-					// if --fix is used the adding more info
-					if fix {
-						//info for --fix
-						for _, affected := range vuln.Affected {
-							for _, r := range affected.Ranges {
-								for _, event := range r.Events {
-									if event.Introduced != "" {
-										detailedMessage += fmt.Sprintf("- Introduced: %s", event.Introduced)
-									}
-									if event.Fixed != "" {
-										detailedMessage += fmt.Sprintf("\n- Fixed: %s\n", event.Fixed)
-									}
-								}
-							}
-						}
-					}
-					errorChannel <- fmt.Errorf(detailedMessage)
-				}
-			} else {
-				// Non-verbose mode
-				var response models.VerboseResp
-				err = json.Unmarshal(body, &response)
-				if err != nil {
-					errorChannel <- fmt.Errorf("error: Error unmarshalling from response body %s", err.Error())
-					return
-				}
-
-				for _, vuln := range response.Vulns {
-					nonVerboseMessage := fmt.Sprintf("error: Vulnerable package found: %s (Version: %s)\n", name, version)
-
-					// Add fix information if --fix flag is present
-					if fix {
-						for _, affected := range vuln.Affected {
-							for _, r := range affected.Ranges {
-								for _, event := range r.Events {
-									if event.Introduced != "" {
-										nonVerboseMessage += fmt.Sprintf("- Introduced: %s", event.Introduced)
-									}
-									if event.Fixed != "" {
-										nonVerboseMessage += fmt.Sprintf("\n- Fixed: %s\n", event.Fixed)
-									}
-								}
-							}
-						}
-					}
-					errorChannel <- fmt.Errorf(nonVerboseMessage)
-				}
+			// Unmarshal response to check for vulnerabilities
+			var response models.VerboseResp
+			err = json.Unmarshal(body, &response)
+			if err != nil {
+				errorChannel <- fmt.Errorf("error: Error unmarshalling response body: %s", err.Error())
+				return
 			}
 
+			// Generate report for each dependency
+			if len(response.Vulns) == 0 {
+				// Clean dependency (Green)
+				report += fmt.Sprintf("\033[32m✅ %s (Version: %s) is clean.\033[0m\n", name, version)
+			} else {
+				// Vulnerable dependency (Red)
+				vulnerableReport := fmt.Sprintf("\033[31m❌ %s (Version: %s) has vulnerabilities:\n", name, version)
+
+				// Verbose flag shows ID and Summary
+				if verbose {
+					for _, vuln := range response.Vulns {
+						vulnerableReport += fmt.Sprintf("  - ID: %s\n  - Summary: %s\n", vuln.Aliases[0], vuln.Summary)
+					}
+				}
+
+				// Fix flag shows Introduced and Fixed versions
+				if fix {
+					for _, vuln := range response.Vulns {
+						for _, affected := range vuln.Affected {
+							for _, r := range affected.Ranges {
+								for _, event := range r.Events {
+									if event.Introduced != "" {
+										vulnerableReport += fmt.Sprintf("  - Introduced: %s", event.Introduced)
+									}
+									if event.Fixed != "" {
+										vulnerableReport += fmt.Sprintf("\n  - Fixed: %s\n", event.Fixed)
+									}
+								}
+							}
+						}
+					}
+				}
+
+				vulnerableReport += "\033[0m" // Reset color at the end
+				errorChannel <- fmt.Errorf(vulnerableReport)
+				report += vulnerableReport // Append to final report
+			}
 		}(name, version)
 	}
 
 	wg.Wait()
 	close(errorChannel)
 
+	// Collect errors to determine if CI should fail
 	var finalError string
 	for err := range errorChannel {
 		if finalError == "" {
@@ -152,9 +136,15 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 		}
 	}
 
+	// Print the final report
+	fmt.Println("\n")
+	fmt.Println("===== Dependency Scan Report =====")
+	fmt.Println(report)
+	fmt.Println("===== End of Report =====")
+
 	if finalError != "" {
-		return response, fmt.Errorf(finalError)
+		return report, fmt.Errorf(finalError) // Fails CI with errors
 	}
 
-	return response, nil
+	return report, nil // CI passes with a clean report
 }
