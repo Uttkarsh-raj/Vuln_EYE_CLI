@@ -26,8 +26,8 @@ jobs:
 
     - name: Build the Docker image
       run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/gitup-cli:latest .
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/vuln-eye-cli:latest .
 
     - name: Push Docker image to Docker Hub
       run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/gitup-cli:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/vuln-eye-cli:latest
