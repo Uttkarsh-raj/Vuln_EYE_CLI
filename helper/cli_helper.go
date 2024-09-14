@@ -130,7 +130,6 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 		}
 	}
 
-	fmt.Println("\n")
 	fmt.Println("===== Dependency Scan Report =====")
 	fmt.Println(report)
 	fmt.Println("===== End of Report =====")

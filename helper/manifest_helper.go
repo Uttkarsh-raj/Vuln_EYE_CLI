@@ -47,7 +47,7 @@ func logPermissionsWithWarning(manifest *models.ManifestData) {
 	fmt.Println("===== Permissions Analysis =====")
 
 	if len(manifest.Permissions) > 0 {
-		fmt.Println("Permissions found in the manifest:\n")
+		fmt.Println("Permissions found in the manifest:")
 		for _, permission := range manifest.Permissions {
 			// Print permission
 			fmt.Printf("Permission granted: %s\n", permission)
