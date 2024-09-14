@@ -18,7 +18,6 @@ func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 	for _, line := range lines {
 		matches := re.FindStringSubmatch(line)
 		if len(matches) > 3 {
-			// Construct key as "group:artifact"
 			key := matches[1] + ":" + matches[2]
 			version := matches[3]
 			deps[key] = version // key is package name, value is version
@@ -30,8 +29,8 @@ func GetDependency(lines []string, re *regexp.Regexp) map[string]string {
 // Get data from the dependencies json
 func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, error) {
 	var wg sync.WaitGroup
-	errorChannel := make(chan error, len(dependencyMap)) // trap the errors
-	report := ""                                         // To store the final report
+	errorChannel := make(chan error, len(dependencyMap))
+	report := ""
 
 	for name, version := range dependencyMap {
 		wg.Add(1)
@@ -45,14 +44,12 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 			}
 			payload.Package.Name = name
 
-			// Marshaling payload into JSON
 			jsonData, err := json.Marshal(payload)
 			if err != nil {
 				errorChannel <- fmt.Errorf("error: Error marshaling payload for %s:%s: %w", name, version, err)
 				return
 			}
 
-			// Sending POST request
 			url := "https://api.osv.dev/v1/query"
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 			if err != nil {
@@ -75,7 +72,6 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 				return
 			}
 
-			// Unmarshal response to check for vulnerabilities
 			var response models.VerboseResp
 			err = json.Unmarshal(body, &response)
 			if err != nil {
@@ -83,7 +79,6 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 				return
 			}
 
-			// Generate report for each dependency
 			if len(response.Vulns) == 0 {
 				// Clean dependency (Green)
 				report += fmt.Sprintf("\033[32m✅ %s (Version: %s) is clean.\033[0m\n", name, version)
@@ -91,14 +86,14 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 				// Vulnerable dependency (Red)
 				vulnerableReport := fmt.Sprintf("\033[31m❌ %s (Version: %s) has vulnerabilities:\n", name, version)
 
-				// Verbose flag shows ID and Summary
+				// Verbose flag output
 				if verbose {
 					for _, vuln := range response.Vulns {
 						vulnerableReport += fmt.Sprintf("  - ID: %s\n  - Summary: %s\n", vuln.Aliases[0], vuln.Summary)
 					}
 				}
 
-				// Fix flag shows Introduced and Fixed versions
+				// Fix flag output
 				if fix {
 					for _, vuln := range response.Vulns {
 						for _, affected := range vuln.Affected {
@@ -116,9 +111,9 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 					}
 				}
 
-				vulnerableReport += "\033[0m" // Reset color at the end
+				vulnerableReport += "\033[0m"
 				errorChannel <- fmt.Errorf(vulnerableReport)
-				report += vulnerableReport // Append to final report
+				report += vulnerableReport
 			}
 		}(name, version)
 	}
@@ -126,7 +121,6 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 	wg.Wait()
 	close(errorChannel)
 
-	// Collect errors to determine if CI should fail
 	var finalError string
 	for err := range errorChannel {
 		if finalError == "" {
@@ -136,7 +130,6 @@ func GetData(dependencyMap map[string]string, verbose bool, fix bool) (string, e
 		}
 	}
 
-	// Print the final report
 	fmt.Println("\n")
 	fmt.Println("===== Dependency Scan Report =====")
 	fmt.Println(report)
