@@ -91,12 +91,12 @@ jobs:
       run: |
         docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest ls -alh /repo
 
-    # Run CLI tool with `gitup scan` command in the root directory
+    # Run CLI tool with `gitup scan` command in the root directory - For Java/Kotlin projects
     - name: Run `gitup scan` in the root directory
       run: |
         docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest gitup scan
 
-    # Run CLI tool with flags like `gitup scan --flutter` in the root directory
+    # Run CLI tool with flags like `gitup scan --flutter` in the root directory - For Flutter projects
     - name: Run `gitup scan --flutter` in the root directory
       run: |
         docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest gitup scan --flutter
