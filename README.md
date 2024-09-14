@@ -112,7 +112,8 @@ You can customize the workflow by adding any necessary flags to the gitup scan c
 ## Known Limitations
 
 - Currently optimized for Android and Flutter projects.
-- The CLI tool may not cover all types of vulnerabilities and configurations.
+- The CLI tool focuses on detecting known vulnerable dependencies. The dependency data is sourced from [OSV](https://osv.dev/).
+- The accuracy of the vulnerability detection depends on the completeness and currency of the OSV database. Vulnerabilities may not be detected if they are not listed in OSV or if the database is not updated.
 
 ## License
 
