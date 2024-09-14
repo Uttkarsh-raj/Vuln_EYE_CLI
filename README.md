@@ -1,6 +1,6 @@
 # Gitup CLI Tool
 
-The **Gitup CLI Tool** is a command-line utility designed to **detect vulnerabilities** in Android applications. It analyzes various files to identify security issues, specifically focusing on the **Android manifest** file, **Gradle files** in **Java/Kotlin** projects, and `pubspec.yaml` files in **Flutter** projects and checks for the presence for vulnerable third-party dependencies.
+The **Gitup CLI Tool** is a command-line utility designed to **detect vulnerabilities** in Android applications. It analyzes various files to identify security issues, specifically focusing on the **Android manifest** file, **Gradle files** in **Java/Kotlin** projects, and `pubspec.yaml` files in **Flutter** projects and checks for the presence for vulnerable third-party dependencies. The tool is also designed for easy CI integration, allowing it to be seamlessly incorporated into your continuous integration pipeline to automatically scan and assess vulnerabilities in your codebase as part of your build process.
 
 ## Features
 
@@ -13,7 +13,7 @@ The **Gitup CLI Tool** is a command-line utility designed to **detect vulnerabil
 
 ## Why Choose Us?
 
-Unlike traditional static analysis tools, the **Gitup CLI Tool** offers a streamlined, context-specific approach tailored to Android and Flutter projects. With a focus on comprehensive vulnerability detection and actionable fix suggestions, it provides a practical and efficient solution for maintaining application security.
+The Gitup CLI Tool offers a streamlined, command-line-based approach to vulnerability detection for Android applications. Unlike traditional tools, it provides a focused analysis of key files and dependencies and easily integrates with your CI pipeline to analyze your project, making it a seamless addition to your development workflow.
 
 ## Setup
 
