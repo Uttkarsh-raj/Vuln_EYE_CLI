@@ -1,6 +1,6 @@
-# Gitup CLI Tool
+# Vuln_EYE CLI Tool
 
-The **Gitup CLI Tool** is a command-line utility designed to **detect vulnerabilities** in Android applications. It analyzes various files to identify security issues, specifically focusing on the **Android manifest** file, **Gradle files** in **Java/Kotlin** projects, and `pubspec.yaml` files in **Flutter** projects and checks for the presence for vulnerable third-party dependencies. The tool is also designed for easy CI integration, allowing it to be seamlessly incorporated into your continuous integration pipeline to automatically scan and assess vulnerabilities in your codebase as part of your build process.
+The **Vuln_EYE CLI Tool** is a command-line utility designed to **detect vulnerabilities** in Android applications. It analyzes various files to identify security issues, specifically focusing on the **Android manifest** file, **Gradle files** in **Java/Kotlin** projects, and `pubspec.yaml` files in **Flutter** projects and checks for the presence for vulnerable third-party dependencies. The tool is also designed for easy CI integration, allowing it to be seamlessly incorporated into your continuous integration pipeline to automatically scan and assess vulnerabilities in your codebase as part of your build process.
 
 ## Features
 
@@ -84,22 +84,22 @@ jobs:
 
     - name: Pull Docker image
       run: |
-        docker pull uttkarshraj/gitup-cli:latest
+        docker pull uttkarshraj/vuln-eye-cli:latest
 
     # List files in the mounted directory (for debugging)
     - name: List files in mounted directory
       run: |
-        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest ls -alh /repo
+        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest ls -alh /repo
 
     # Run CLI tool with `gitup scan` command in the root directory - For Java/Kotlin projects
-    - name: Run `gitup scan` in the root directory
+    - name: Run `veye scan` in the root directory
       run: |
-        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest gitup scan
+        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest gitup scan
 
     # Run CLI tool with flags like `gitup scan --flutter` in the root directory - For Flutter projects
-    - name: Run `gitup scan --flutter` in the root directory
+    - name: Run `veye scan --flutter` in the root directory
       run: |
-        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/gitup-cli:latest gitup scan --flutter
+        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest gitup scan --flutter
 ```
 You can customize the workflow by adding any necessary flags to the gitup scan command based on your requirements.<br>
 **Flags:**
