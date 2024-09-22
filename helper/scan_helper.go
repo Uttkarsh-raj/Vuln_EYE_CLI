@@ -6,7 +6,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/Uttkarsh-raj/gitup/models"
+	"github.com/Uttkarsh-raj/veye/models"
 	"gopkg.in/yaml.v3"
 )
 

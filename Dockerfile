@@ -8,6 +8,6 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /usr/local/bin/gitup .
+RUN go build -o /usr/local/bin/veye .
 
-CMD ["gitup"]
+CMD ["veye"]

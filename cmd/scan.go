@@ -5,7 +5,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/Uttkarsh-raj/gitup/helper"
+	"github.com/Uttkarsh-raj/veye/helper"
 	"github.com/spf13/cobra"
 )
 

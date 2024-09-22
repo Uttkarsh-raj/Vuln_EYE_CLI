@@ -28,7 +28,7 @@ The Vuln-EYE CLI Tool offers a streamlined, command-line-based approach to vulne
 2. **Install Dependencies:**
 
    ```bash
-   cd gitup-cli
+   cd veye-cli
    go mod tidy
    ```
 
@@ -46,10 +46,10 @@ The Vuln-EYE CLI Tool offers a streamlined, command-line-based approach to vulne
 
 5. **Run the Command:**
 
-   Use the `gitup` command to scan your project:
+   Use the `veye` command to scan your project:
 
    ```bash
-   gitup scan [flags]
+   veye scan [flags]
    ```
 
    **Flags:**
@@ -61,7 +61,7 @@ The Vuln-EYE CLI Tool offers a streamlined, command-line-based approach to vulne
 
 ### GitHub Actions Setup
 
-You can integrate the Gitup CLI Tool into your GitHub Actions workflow. Here’s a sample workflow file:
+You can integrate the veye CLI Tool into your GitHub Actions workflow. Here’s a sample workflow file:
 
 ```yaml
 name: Run CLI Tool
@@ -91,17 +91,17 @@ jobs:
       run: |
         docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest ls -alh /repo
 
-    # Run CLI tool with `gitup scan` command in the root directory - For Java/Kotlin projects
+    # Run CLI tool with `veye scan` command in the root directory - For Java/Kotlin projects
     - name: Run `veye scan` in the root directory
       run: |
-        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest gitup scan
+        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest veye scan
 
-    # Run CLI tool with flags like `gitup scan --flutter` in the root directory - For Flutter projects
+    # Run CLI tool with flags like `veye scan --flutter` in the root directory - For Flutter projects
     - name: Run `veye scan --flutter` in the root directory
       run: |
-        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest gitup scan --flutter
+        docker run -v ${{ github.workspace }}:/repo -w /repo uttkarshraj/vuln-eye-cli:latest veye scan --flutter
 ```
-You can customize the workflow by adding any necessary flags to the gitup scan command based on your requirements.<br>
+You can customize the workflow by adding any necessary flags to the veye scan command based on your requirements.<br>
 **Flags:**
 
    - `--fix`       Provides the fixed version if available.

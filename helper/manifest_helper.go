@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Uttkarsh-raj/gitup/models"
+	"github.com/Uttkarsh-raj/veye/models"
 )
 
 func AnalyzeManifest() error {

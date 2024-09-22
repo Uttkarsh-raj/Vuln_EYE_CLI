@@ -1,4 +1,4 @@
-module github.com/Uttkarsh-raj/gitup
+module github.com/Uttkarsh-raj/veye
 
 go 1.22.2
 
