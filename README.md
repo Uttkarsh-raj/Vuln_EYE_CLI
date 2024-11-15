@@ -11,6 +11,10 @@ The **Vuln-EYE CLI Tool** is a command-line utility designed to **detect vulnera
 - **Fix Suggestions**: Provides the fixed version if available to address detected vulnerabilities.
 - **Verbose Output**: Optionally provides detailed output for debugging and understanding the analysis.
 
+## Demo
+
+https://github.com/user-attachments/assets/8b85b837-6464-42f6-94b5-e84a7a54fbf8
+
 ## Why Choose Us?
 
 The Vuln-EYE CLI Tool offers a streamlined, command-line-based approach to vulnerability detection for Android applications. Unlike traditional tools, it provides a focused analysis of key files and dependencies and easily integrates with your CI pipeline to analyze your project, making it a seamless addition to your development workflow.
